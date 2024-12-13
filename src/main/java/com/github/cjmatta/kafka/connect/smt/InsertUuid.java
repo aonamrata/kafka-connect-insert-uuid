@@ -30,14 +30,19 @@ import org.apache.kafka.connect.transforms.Transformation;
 import org.apache.kafka.connect.transforms.util.SchemaUtil;
 import org.apache.kafka.connect.transforms.util.SimpleConfig;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
 
 public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transformation<R> {
+  private Logger logger = LoggerFactory.getLogger("InsertUuid");
 
   public static final String OVERVIEW_DOC =
     "Insert a random UUID into a connect record";
@@ -60,6 +65,7 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
   public void configure(Map<String, ?> props) {
     final SimpleConfig config = new SimpleConfig(CONFIG_DEF, props);
     fieldName = config.getString(ConfigName.UUID_FIELD_NAME);
+    logger.trace("InsertUuid: configured fieldName=" + fieldName);
 
     schemaUpdateCache = new SynchronizedCache<>(new LRUCache<Schema, Schema>(16));
   }
@@ -68,8 +74,10 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
   @Override
   public R apply(R record) {
     if (operatingSchema(record) == null) {
+        logger.info("InsertUuid: applySchemaless");
       return applySchemaless(record);
     } else {
+      logger.info("InsertUuid: applyWithSchema");
       return applyWithSchema(record);
     }
   }
@@ -78,10 +86,18 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
     final Map<String, Object> value = requireMap(operatingValue(record), PURPOSE);
 
     final Map<String, Object> updatedValue = new HashMap<>(value);
-
     updatedValue.put(fieldName, getRandomUuid());
+    if (updatedValue.containsKey("meta")) {
+      final HashMap meta = (HashMap) updatedValue.get("meta");
+      final String operation = (String) meta.get("operation");
+      if (Objects.equals(operation, "updated")) {
+          meta.put("operation", "created");
+      }
+    }
+    final R x = newRecord(record, null, updatedValue);
+    logger.info("InsertUuid: newRecord== {}", x);
 
-    return newRecord(record, null, updatedValue);
+    return x;
   }
 
   private R applyWithSchema(R record) {

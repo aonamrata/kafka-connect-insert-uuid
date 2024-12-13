@@ -19,3 +19,9 @@ ToDO
 * ~~add support for records without schemas~~
 
 Lots borrowed from the Apache Kafka® `InsertField` SMT
+
+
+```
+mvn install
+```
+
