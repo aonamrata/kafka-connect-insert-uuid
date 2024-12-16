@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package com.github.cjmatta.kafka.connect.smt;
+package com.github.pde.kafka.connect.smt;
 
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
@@ -31,9 +30,9 @@ import java.util.Map;
 
 import static org.junit.Assert.*;
 
-public class InsertUuidTest {
+public class ChangeOperationTest {
 
-  private InsertUuid<SourceRecord> xform = new InsertUuid.Value<>();
+  private ChangeOperation<SourceRecord> xform = new ChangeOperation.Value<>();
 
   @After
   public void tearDown() throws Exception {
@@ -42,7 +41,7 @@ public class InsertUuidTest {
 
   @Test(expected = DataException.class)
   public void topLevelStructRequired() {
-    xform.configure(Collections.singletonMap("uuid.field.name", "myUuid"));
+    xform.configure(Collections.singletonMap("uuid.field.value", "updated"));
     xform.apply(new SourceRecord(null, null, "", 0, Schema.INT32_SCHEMA, 42));
   }
 
@@ -50,7 +49,7 @@ public class InsertUuidTest {
   public void copySchemaAndInsertUuidField() {
     final Map<String, Object> props = new HashMap<>();
 
-    props.put("uuid.field.name", "myUuid");
+    props.put("uuid.field.value", "myUuid");
 
     xform.configure(props);
 
@@ -79,8 +78,8 @@ public class InsertUuidTest {
   @Test
   public void schemalessInsertUuidField() {
     final Map<String, Object> props = new HashMap<>();
-
-    props.put("uuid.field.name", "myUuid");
+    // @todo update this to work for change operation.
+    props.put("uuid.field.value", "myUuid");
 
     xform.configure(props);
 

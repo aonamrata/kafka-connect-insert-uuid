@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.cjmatta.kafka.connect.smt;
+package com.github.pde.kafka.connect.smt;
 
 import org.apache.kafka.common.cache.Cache;
 import org.apache.kafka.common.cache.LRUCache;
@@ -41,31 +41,31 @@ import java.util.UUID;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireMap;
 import static org.apache.kafka.connect.transforms.util.Requirements.requireStruct;
 
-public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transformation<R> {
-  private Logger logger = LoggerFactory.getLogger("InsertUuid");
+public abstract class ChangeOperation<R extends ConnectRecord<R>> implements Transformation<R> {
+  private Logger logger = LoggerFactory.getLogger("ChangeOperation");
 
   public static final String OVERVIEW_DOC =
     "Insert a random UUID into a connect record";
 
   private interface ConfigName {
-    String UUID_FIELD_NAME = "uuid.field.name";
+    String UUID_FIELD_NAME = "uuid.field.value";
   }
 
   public static final ConfigDef CONFIG_DEF = new ConfigDef()
-    .define(ConfigName.UUID_FIELD_NAME, ConfigDef.Type.STRING, "uuid", ConfigDef.Importance.HIGH,
-      "Field name for UUID");
+    .define(ConfigName.UUID_FIELD_NAME, ConfigDef.Type.STRING, "updated", ConfigDef.Importance.HIGH,
+      "Value for operation");
 
-  private static final String PURPOSE = "adding UUID to record";
+  private static final String PURPOSE = "Change operation";
 
-  private String fieldName;
+  private String fieldValue;
 
   private Cache<Schema, Schema> schemaUpdateCache;
 
   @Override
   public void configure(Map<String, ?> props) {
     final SimpleConfig config = new SimpleConfig(CONFIG_DEF, props);
-    fieldName = config.getString(ConfigName.UUID_FIELD_NAME);
-    logger.trace("InsertUuid: configured fieldName=" + fieldName);
+    fieldValue = config.getString(ConfigName.UUID_FIELD_NAME);
+    logger.trace("ChangeOperation: configured fieldValue=" + fieldValue);
 
     schemaUpdateCache = new SynchronizedCache<>(new LRUCache<Schema, Schema>(16));
   }
@@ -74,10 +74,10 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
   @Override
   public R apply(R record) {
     if (operatingSchema(record) == null) {
-        logger.info("InsertUuid: applySchemaless");
+        logger.info("ChangeOperation: applySchemaless");
       return applySchemaless(record);
     } else {
-      logger.info("InsertUuid: applyWithSchema");
+      logger.info("ChangeOperation: applyWithSchema");
       return applyWithSchema(record);
     }
   }
@@ -86,7 +86,7 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
     final Map<String, Object> value = requireMap(operatingValue(record), PURPOSE);
 
     final Map<String, Object> updatedValue = new HashMap<>(value);
-    updatedValue.put(fieldName, getRandomUuid());
+    updatedValue.put(fieldValue, getRandomUuid());
     if (updatedValue.containsKey("meta")) {
       final HashMap meta = (HashMap) updatedValue.get("meta");
       final String operation = (String) meta.get("operation");
@@ -95,7 +95,7 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
       }
     }
     final R x = newRecord(record, null, updatedValue);
-    logger.info("InsertUuid: newRecord== {}", x);
+    logger.info("ChangeOperation: newRecord== {}", x);
 
     return x;
   }
@@ -115,7 +115,7 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
       updatedValue.put(field.name(), value.get(field));
     }
 
-    updatedValue.put(fieldName, getRandomUuid());
+    updatedValue.put(fieldValue, getRandomUuid());
 
     return newRecord(record, updatedSchema, updatedValue);
   }
@@ -141,7 +141,7 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
       builder.field(field.name(), field.schema());
     }
 
-    builder.field(fieldName, Schema.STRING_SCHEMA);
+    builder.field(fieldValue, Schema.STRING_SCHEMA);
 
     return builder.build();
   }
@@ -152,7 +152,7 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
 
   protected abstract R newRecord(R record, Schema updatedSchema, Object updatedValue);
 
-  public static class Key<R extends ConnectRecord<R>> extends InsertUuid<R> {
+  public static class Key<R extends ConnectRecord<R>> extends ChangeOperation<R> {
 
     @Override
     protected Schema operatingSchema(R record) {
@@ -171,7 +171,7 @@ public abstract class InsertUuid<R extends ConnectRecord<R>> implements Transfor
 
   }
 
-  public static class Value<R extends ConnectRecord<R>> extends InsertUuid<R> {
+  public static class Value<R extends ConnectRecord<R>> extends ChangeOperation<R> {
 
     @Override
     protected Schema operatingSchema(R record) {

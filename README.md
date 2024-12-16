@@ -3,15 +3,15 @@ Kafka Connect SMT to add a random [UUID](https://docs.oracle.com/javase/7/docs/a
 This SMT supports inserting a UUID into the record Key or Value
 Properties:
 
-|Name|Description|Type|Default|Importance|
-|---|---|---|---|---|
-|`uuid.field.name`| Field name for UUID | String | `uuid` | High |
+|Name| Description         |Type| Default   |Importance|
+|---|---------------------|---|-----------|---|
+|`uuid.field.value`| Value for operation | String | `updated` | High |
 
 Example on how to add to your connector:
 ```
-transforms=insertuuid
-transforms.insertuuid.type=com.github.cjmatta.kafka.connect.smt.InsertUuid$Value
-transforms.insertuuid.uuid.field.name="uuid"
+  "transforms" : "insertuuid",
+"transforms.insertuuid.type": "com.github.pde.kafka.connect.smt.ChangeOperation$Value",
+"transforms.insertuuid.uuid.field.value": "created"
 ```
 
 
@@ -21,6 +21,8 @@ ToDO
 Lots borrowed from the Apache Kafka® `InsertField` SMT
 
 
+
+Run and create JAR file locally
 ```
 mvn install
 ```
